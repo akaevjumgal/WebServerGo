@@ -1,35 +1,44 @@
 package main
 
 import (
-	"crypto/rand"
 	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 	/*Random numbers*/
-
+	"crypto/rand"
 	/*Database*/
+	"database/sql"
 
 	_ "github.com/mattn/go-sqlite3"
+)
+
+var (
+	createDB      = "create table if not exists post (uid integer, username text, message text, postDate CURRENT_TIMESTAMP)"
+	database, err = sql.Open("sqlite3", "/home/akaev_jumgal/golang/WebServerGo/posts.db")
 )
 
 func savePostHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	inputName := r.FormValue("inputName")
 	textarea := r.FormValue("textarea")
+	isError(err)
 
-	// database, err := sql.Open("sqlite3", "./posts.db")
-	// isError(err)
-	//
-	// stmt, err := database.Prepare("INSERT INTO post(uid, username, message, postDate) values(?,?,?,?)")
-	// stmt.Exec(RandomID(), inputName, textarea, time.Now())
-	// isError(err)
-	fmt.Println("Username:"+inputName, "\nMessage:"+textarea)
+	database.Exec(createDB)
+	tx, _ := database.Begin()
+	stmt, err := tx.Prepare("INSERT INTO post(uid, username, message, postDate) values(?, ?, ?, ?)")
+	isError(err)
+	rnd := RandomID()
+	stmt.Exec(rnd, inputName, textarea, time.Now())
+
+	tx.Commit()
 
 }
 
 ///home/akaev_jumgal/.cache/go-build
 func main() {
 	// writeFile()
+
 	fmt.Println("Serving on port 8000...")
 	http.HandleFunc("/", mainPage)
 	http.HandleFunc("/write", writePage)
@@ -62,7 +71,10 @@ func isError(err error) bool {
 
 	return (err != nil)
 }
+
+//RandomID() is the function, that generate random user ID
 func RandomID() string {
+
 	b := make([]byte, 16)
 	rand.Read(b)
 
@@ -70,11 +82,14 @@ func RandomID() string {
 }
 
 // data := map[string]string{
-// 		"id": RandomId(),
-// 		"username": inputName,
-// 		"message": textarea,
+// 	"id":
+// 	"username": inputName,
+// 	"message":  textarea,
 // }
-// json, e := json.MarshalIndent(data, "", "")
+//
+// json, e := json.MarshalIndent(stmt, "", "")
 // if e != nil {
 // 	log.Fatal(e)
 // }
+//
+// fmt.Println(string(json))
